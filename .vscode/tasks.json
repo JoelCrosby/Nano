@@ -7,6 +7,14 @@
             "label": "build",
             "type": "shell",
             "command": "./build.sh"
+        },
+        {
+            "label": "release",
+            "type": "shell",
+            "command": "./build_release.sh",
+            "problemMatcher": [
+                "$rustc"
+            ]
         }
     ]
 }

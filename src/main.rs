@@ -1,4 +1,5 @@
 extern crate serde_json;
+extern crate mime_guess;
 
 #[macro_use]
 extern crate serde_derive;
@@ -8,6 +9,8 @@ use std::io::prelude::*;
 use std::io;
 use std::net::TcpListener;
 use std::net::TcpStream;
+use std::path::Path;
+use std::ffi::OsStr;
 
 #[derive(Serialize, Deserialize)]
 struct Options {
@@ -35,9 +38,12 @@ fn main() {
     println!("\nListening for connections...\n");
 
     for stream in listener.incoming() {
-        let stream = stream.unwrap();
-
-        handle_connection(stream, &o.wwwroot);
+            match stream {
+            Ok(stream) => {
+                handle_connection(stream, &o.wwwroot);
+            }
+            Err(e) => println!("Connection failed... {}", e)
+        }
     }
 }
 
@@ -68,10 +74,21 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
 
     println!("Path: {}", &getfile);
 
-    let (status_line, filename) = if buffer.starts_with(get) {
-        ("HTTP/1.1 200 OK\r\n\r\n", &mainpage)
+    let ext = get_extension_from_filename(&getfile);
+    let ext = match ext {
+        Some(val) => val,
+        None => ".html"
+    };
+
+    let (status_line, filename, mime) = if buffer.starts_with(get) {
+        ("HTTP/1.1 200 OK\r\n", &mainpage, mime_guess::get_mime_type_str(&mainpage))
     } else {
-        ("HTTP/1.1 200 OK\r\n\r\n", &getfile)
+        ("HTTP/1.1 200 OK\r\n", &getfile, mime_guess::get_mime_type_str(ext))
+    };
+
+    let mime = match mime {
+        Some(val) => val,
+        None => "text/html;"
     };
 
     let mut w = wwwroot.clone();
@@ -85,7 +102,8 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
     };
 
     if res.is_ok() {
-        let response = format!("{}{}", status_line, res.unwrap());
+        let response = format!("{}Content-Type: {}\r\n\r\n{}", status_line, mime, res.unwrap());
+        println!("{}", response);
         stream.write(response.as_bytes()).unwrap();
         stream.flush().unwrap();
     } else {
@@ -93,8 +111,6 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
         stream.write(response.as_bytes()).unwrap();
         stream.flush().unwrap();
     }
-
-
 }
 
 fn read_file(filename: &String) -> Result<String, io::Error> {
@@ -115,3 +131,8 @@ fn read_file(filename: &String) -> Result<String, io::Error> {
     Ok(contents)
 }
 
+fn get_extension_from_filename(filename: &str) -> Option<&str> {
+    Path::new(filename)
+        .extension()
+        .and_then(OsStr::to_str)
+}
