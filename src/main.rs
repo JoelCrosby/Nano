@@ -103,7 +103,6 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
 
     if res.is_ok() {
         let response = format!("{}Content-Type: {}\r\n\r\n{}", status_line, mime, res.unwrap());
-        println!("{}", response);
         stream.write(response.as_bytes()).unwrap();
         stream.flush().unwrap();
     } else {
