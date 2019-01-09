@@ -68,8 +68,6 @@ fn load_configuration() -> Result<Config, io::Error> {
 
 fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
 
-    
-
     // Allocate 4kB buffer
     let mut buffer = [0; 1024];
 
