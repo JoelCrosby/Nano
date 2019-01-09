@@ -22,6 +22,9 @@
             "command": "cargo",
             "args": [
                 "clippy"
+            ],
+            "problemMatcher": [
+                "$rustc"
             ]
         }
     ]

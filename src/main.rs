@@ -66,7 +66,7 @@ fn load_configuration() -> Result<Config, io::Error> {
     Ok(v)
 }
 
-fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
+fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
 
     // Allocate 1kB buffer
     let mut buffer = [0; 1024];
@@ -87,7 +87,7 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
 
     let getfile = chunks[1]
         .replace("/", "\\")
-        .trim_start_matches("\\")
+        .trim_start_matches('\\')
         .to_string();
 
     let mainpage = "index.html".to_string();
@@ -144,20 +144,20 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
 
 }
 
-fn res_ok(stream: &mut TcpStream, response: &String) -> Result<(), io::Error>  {
+fn res_ok(stream: &mut TcpStream, response: &str) -> Result<(), io::Error>  {
     stream.write(response.as_bytes())?;
     stream.flush()?;
     Ok(())
 }
 
 fn not_found(stream: &mut TcpStream) -> Result<(), io::Error> {
-    let response = format!("HTTP/1.1 404 NOT FOUND\r\n\r\n");
+    let response = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
     stream.write(response.as_bytes())?;
     stream.flush()?;
     Ok(())
 }
 
-fn read_file(filename: &String) -> Result<String, io::Error> {
+fn read_file(filename: &str) -> Result<String, io::Error> {
     let f = File::open(filename);
 
     let mut f = match f {
