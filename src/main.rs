@@ -11,22 +11,33 @@ use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::path::Path;
+use std::time::Instant;
+use std::time::Duration;
+use std::thread::sleep;
 
 #[derive(Serialize, Deserialize)]
-struct Options {
+struct Config {
     wwwroot: String,
     address: String,
 }
 
 fn main() {
-    let o = load_configuration().unwrap();
+    // Load Configuration Options.
+    let o = match load_configuration() {
+        Ok(v) => v,
+        Err(_err) => {
+            print!(
+                "Failed to load configuration file. \r\n\
+                 Please create a valid nano.json \
+                 configuration file in the binary directory.");
+            return;
+        }
+    };
 
     println!("\nNano server started!");
     println!("\nBinding address... {}", o.address);
 
-    let listener = TcpListener::bind(o.address);
-
-    let listener = match listener {
+    let listener = match TcpListener::bind(o.address) {
         Ok(socket) => socket,
         Err(error) => {
             println!("\nNano server was unable to start {}", error);
@@ -46,23 +57,37 @@ fn main() {
     }
 }
 
-fn load_configuration() -> Result<Options, io::Error> {
+fn load_configuration() -> Result<Config, io::Error> {
     let path = "nano.json".to_string();
-    let config = read_file(&path).unwrap();
+    let config = read_file(&path)?;
 
-    let v: Options = serde_json::from_str(&config)?;
+    let v: Config = serde_json::from_str(&config)?;
 
     Ok(v)
 }
 
 fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
+
+    let now = Instant::now();
+
+    // Allocate 4kB buffer
     let mut buffer = [0; 1024];
+
+    // Fill buffer from stream.
     stream.read(&mut buffer).unwrap();
 
-    let get = b"GET / HTTP/1.1\r\n";
+    // Read utf8 buffer to String.
     let strget = String::from_utf8_lossy(&buffer);
 
     let chunks: Vec<_> = strget.split_whitespace().collect();
+
+    if chunks.len() < 2 {
+        not_found(&mut stream)
+            .expect("not found error.");
+        println!("{}ms", now.elapsed().as_millis());
+        return;
+    }
+
     let getfile = chunks[1]
         .replace("/", "\\")
         .trim_start_matches("\\")
@@ -70,14 +95,13 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
 
     let mainpage = "index.html".to_string();
 
-    println!("Path: {}", &getfile);
-
     let ext = get_extension_from_filename(&getfile);
     let ext = match ext {
         Some(val) => val,
         None => ".html",
     };
 
+    let get = b"GET / HTTP/1.1\r\n";
     let (status_line, filename, mime) = if buffer.starts_with(get) {
         (
             "HTTP/1.1 200 OK\r\n",
@@ -97,30 +121,45 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
         None => "text/html;",
     };
 
-    let mut w = wwwroot.clone();
-
-    w.push_str(&filename);
-    let contents = read_file(&w);
+    let mut full_path = String::with_capacity(128);
+    full_path.push_str(&wwwroot);
+    full_path.push_str(&filename);
+    let contents = read_file(&full_path);
 
     let res = match contents {
-        Ok(c) => Ok(c),
-        Err(e) => Err(e),
+        Ok(c) => c,
+        Err(_err) => {
+            not_found(&mut stream)
+                .expect("not found error.");
+            println!("{}ms", now.elapsed().as_millis());
+            return;
+        },
     };
 
-    if res.is_ok() {
-        let response = format!(
-            "{}Content-Type: {}\r\n\r\n{}",
-            status_line,
-            mime,
-            res.unwrap()
-        );
-        stream.write(response.as_bytes()).unwrap();
-        stream.flush().unwrap();
-    } else {
-        let response = format!("HTTP/1.1 404 NOT FOUND\r\n\r\n");
-        stream.write(response.as_bytes()).unwrap();
-        stream.flush().unwrap();
-    }
+    let response = format!(
+        "{}Content-Type: {}\r\n\r\n{}",
+        status_line,
+        mime,
+        res
+    );
+
+    res_ok(&mut stream, &response)
+        .expect("res ok error.");
+
+    println!("{}ms", now.elapsed().as_millis());
+}
+
+fn res_ok(stream: &mut TcpStream, response: &String) -> Result<(), io::Error>  {
+    stream.write(response.as_bytes())?;
+    stream.flush()?;
+    Ok(())
+}
+
+fn not_found(stream: &mut TcpStream) -> Result<(), io::Error> {
+    let response = format!("HTTP/1.1 404 NOT FOUND\r\n\r\n");
+    stream.write(response.as_bytes())?;
+    stream.flush()?;
+    Ok(())
 }
 
 fn read_file(filename: &String) -> Result<String, io::Error> {
@@ -134,8 +173,7 @@ fn read_file(filename: &String) -> Result<String, io::Error> {
     };
 
     let mut contents = String::new();
-    f.read_to_string(&mut contents)
-        .expect("something went wrong reading the file");
+    f.read_to_string(&mut contents)?;
 
     Ok(contents)
 }
