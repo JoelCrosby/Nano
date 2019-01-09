@@ -12,8 +12,6 @@ use std::net::TcpListener;
 use std::net::TcpStream;
 use std::path::Path;
 use std::time::Instant;
-use std::time::Duration;
-use std::thread::sleep;
 
 #[derive(Serialize, Deserialize)]
 struct Config {
