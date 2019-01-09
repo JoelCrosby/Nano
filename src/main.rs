@@ -27,7 +27,8 @@ fn main() {
             print!(
                 "Failed to load configuration file. \r\n\
                  Please create a valid nano.json \
-                 configuration file in the binary directory.");
+                 configuration file in the binary directory."
+            );
             return;
         }
     };
@@ -67,7 +68,6 @@ fn load_configuration() -> Result<Config, io::Error> {
 }
 
 fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
-
     // Allocate 1kB buffer
     let mut buffer = [0; 1024];
 
@@ -80,8 +80,7 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
     let chunks: Vec<_> = strget.split_whitespace().collect();
 
     if chunks.len() < 2 {
-        not_found(&mut stream)
-            .expect("not found error.");
+        not_found(&mut stream).expect("not found error.");
         return;
     }
 
@@ -126,25 +125,17 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
     let res = match contents {
         Ok(c) => c,
         Err(_err) => {
-            not_found(&mut stream)
-                .expect("not found error.");
+            not_found(&mut stream).expect("not found error.");
             return;
-        },
+        }
     };
 
-    let response = format!(
-        "{}Content-Type: {}\r\n\r\n{}",
-        status_line,
-        mime,
-        res
-    );
+    let response = format!("{}Content-Type: {}\r\n\r\n{}", status_line, mime, res);
 
-    res_ok(&mut stream, &response)
-        .expect("res ok error.");
-
+    res_ok(&mut stream, &response).expect("res ok error.");
 }
 
-fn res_ok(stream: &mut TcpStream, response: &str) -> Result<(), io::Error>  {
+fn res_ok(stream: &mut TcpStream, response: &str) -> Result<(), io::Error> {
     stream.write(response.as_bytes())?;
     stream.flush()?;
     Ok(())
