@@ -48,7 +48,9 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
+                let now = Instant::now();
                 handle_connection(stream, &o.wwwroot);
+                println!("handeled connection in {}ms", now.elapsed().as_millis());
             }
             Err(e) => println!("Connection failed... {}", e),
         }
@@ -66,7 +68,7 @@ fn load_configuration() -> Result<Config, io::Error> {
 
 fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
 
-    let now = Instant::now();
+    
 
     // Allocate 4kB buffer
     let mut buffer = [0; 1024];
@@ -82,7 +84,6 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
     if chunks.len() < 2 {
         not_found(&mut stream)
             .expect("not found error.");
-        println!("{}ms", now.elapsed().as_millis());
         return;
     }
 
@@ -129,7 +130,6 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
         Err(_err) => {
             not_found(&mut stream)
                 .expect("not found error.");
-            println!("{}ms", now.elapsed().as_millis());
             return;
         },
     };
@@ -144,7 +144,6 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &String) {
     res_ok(&mut stream, &response)
         .expect("res ok error.");
 
-    println!("{}ms", now.elapsed().as_millis());
 }
 
 fn res_ok(stream: &mut TcpStream, response: &String) -> Result<(), io::Error>  {
