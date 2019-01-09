@@ -2,6 +2,7 @@
 name = "nano"
 version = "0.1.0"
 authors = ["Joel Crosby <joelcrosby@live.co.uk>"]
+edition = "2018"
 
 [dependencies]
 serde = "1.0"
