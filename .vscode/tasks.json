@@ -15,6 +15,14 @@
             "problemMatcher": [
                 "$rustc"
             ]
+        },
+        {
+            "label": "clippy lint",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "clippy"
+            ]
         }
     ]
 }
