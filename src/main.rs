@@ -129,8 +129,6 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
 
     let response = format!("{}Content-Type: {}\r\n\r\n{}", status_line, mime, res);
 
-    println!("-- res -> {}", response);
-
     res_ok(&mut stream, &response).expect("res ok error.");
 }
 
@@ -176,6 +174,5 @@ fn read_file(filename: &str) -> Result<String, io::Error> {
 
 fn get_extension_from_filename(filename: &str) -> Option<&str> {
     let res = Path::new(filename).extension().and_then(OsStr::to_str);
-    println!(" -- ext -> {}", res.unwrap());
     res
 }
