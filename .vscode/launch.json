@@ -23,19 +23,16 @@
         },
         {
             "name": "(OSX) Launch",
-            "type": "cppvsdbg",
+            "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/target/debug/nano",
             "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": true,
             "preLaunchTask": "build",
-            "logging": {
-                "moduleLoad": false,
-                "engineLogging": false
-            },
+            "sourceLanguages": ["rust"],
+            "osx": {
+                "terminal": "console"
+            }
         }
     ]
 }
