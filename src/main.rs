@@ -73,8 +73,7 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
         Ok(c) => c,
         Err(err) => {
             let msg = format!("An error occured while trying to read stream. \r\n{}", err);
-            res_internal_server_error(&mut stream, &msg)
-                .expect("unable to responde with 500");
+            res_internal_server_error(&mut stream, &msg).expect("unable to responde with 500");
             return;
         }
     };
