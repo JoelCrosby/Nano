@@ -21,7 +21,7 @@ struct Config {
 
 fn main() {
     // Load Configuration Options.
-    let o = match load_configuration() {
+    let o = match load_configuration("nano.json") {
         Ok(v) => v,
         Err(_err) => {
             print!(
@@ -58,10 +58,8 @@ fn main() {
     }
 }
 
-fn load_configuration() -> Result<Config, io::Error> {
-    let path = "nano.json".to_string();
+fn load_configuration(path: &str) -> Result<Config, io::Error> {
     let config = read_file(&path)?;
-
     let v: Config = serde_json::from_str(&config)?;
 
     Ok(v)
