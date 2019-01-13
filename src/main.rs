@@ -21,7 +21,7 @@ struct Config {
 
 fn main() {
     // Load Configuration Options.
-    let o = match load_configuration() {
+    let o = match load_configuration("nano.json") {
         Ok(v) => v,
         Err(_err) => {
             print!(
@@ -51,47 +51,46 @@ fn main() {
             Ok(stream) => {
                 let now = Instant::now();
                 handle_connection(stream, &o.wwwroot);
-                println!("handeled connection in {}ms", now.elapsed().as_millis());
+                println!(" --  response ⚡ {}ms", now.elapsed().as_millis());
             }
             Err(e) => println!("Connection failed... {}", e),
         }
     }
 }
 
-fn load_configuration() -> Result<Config, io::Error> {
-    let path = "nano.json".to_string();
+fn load_configuration(path: &str) -> Result<Config, io::Error> {
     let config = read_file(&path)?;
-
     let v: Config = serde_json::from_str(&config)?;
 
     Ok(v)
 }
 
 fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
-    // Allocate 1kB buffer
-    let mut buffer = [0; 1024];
-
-    // Fill buffer from stream.
-    stream.read(&mut buffer).unwrap();
+    // Read tream to buffer.
+    let buffer = match read_stream_to_buffer(&mut stream) {
+        Ok(c) => c,
+        Err(err) => {
+            let msg = format!("An error occured while trying to read stream. \r\n{}", err);
+            res_internal_server_error(&mut stream, &msg).expect("unable to responde with 500");
+            return;
+        }
+    };
 
     // Read utf8 buffer to String.
     let strget = String::from_utf8_lossy(&buffer);
 
     let chunks: Vec<_> = strget.split_whitespace().collect();
 
-    if chunks.len() < 2 {
-        not_found(&mut stream).expect("not found error.");
-        return;
-    }
+    let resource_path = match find_resource_path_in_stream(chunks) {
+        Some(val) => val,
+        None => "",
+    };
 
-    let getfile = chunks[1]
-        .replace("/", "\\")
-        .trim_start_matches('\\')
-        .to_string();
+    println!("req -> {}", resource_path);
 
-    let mainpage = "index.html".to_string();
+    let mainpage = "index.html";
 
-    let ext = get_extension_from_filename(&getfile);
+    let ext = get_extension_from_filename(&resource_path);
     let ext = match ext {
         Some(val) => val,
         None => ".html",
@@ -107,7 +106,7 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
     } else {
         (
             "HTTP/1.1 200 OK\r\n",
-            &getfile,
+            &resource_path,
             mime_guess::get_mime_type_str(ext),
         )
     };
@@ -125,7 +124,7 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
     let res = match contents {
         Ok(c) => c,
         Err(_err) => {
-            not_found(&mut stream).expect("not found error.");
+            res_not_found(&mut stream).expect("not found error.");
             return;
         }
     };
@@ -135,14 +134,41 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
     res_ok(&mut stream, &response).expect("res ok error.");
 }
 
+fn read_stream_to_buffer(stream: &mut TcpStream) -> Result<[u8; 1024], io::Error> {
+    // Create a new empty buffer.
+    let mut buffer = [0; 1024];
+    // Fill buffer from stream.
+    stream.read(&mut buffer)?;
+    Ok(buffer)
+}
+
+fn find_resource_path_in_stream(chunks: Vec<&str>) -> Option<&str> {
+    let start = "/";
+    for chunk in chunks.iter() {
+        if chunk.starts_with(start) {
+            return Some(chunk);
+        }
+    }
+    None
+}
+
 fn res_ok(stream: &mut TcpStream, response: &str) -> Result<(), io::Error> {
     stream.write(response.as_bytes())?;
     stream.flush()?;
     Ok(())
 }
 
-fn not_found(stream: &mut TcpStream) -> Result<(), io::Error> {
+fn res_not_found(stream: &mut TcpStream) -> Result<(), io::Error> {
     let response = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
+    stream.write(response.as_bytes())?;
+    stream.flush()?;
+    Ok(())
+}
+
+fn res_internal_server_error(stream: &mut TcpStream, message: &str) -> Result<(), io::Error> {
+    println!("{}", &message);
+    let status_line = "HTTP/1.1 500 NOT FOUND\r\n\r\n";
+    let response = format!("{}Content-Type: text/plain\r\n\r\n{}", status_line, message);
     stream.write(response.as_bytes())?;
     stream.flush()?;
     Ok(())
@@ -165,5 +191,6 @@ fn read_file(filename: &str) -> Result<String, io::Error> {
 }
 
 fn get_extension_from_filename(filename: &str) -> Option<&str> {
-    Path::new(filename).extension().and_then(OsStr::to_str)
+    let res = Path::new(filename).extension().and_then(OsStr::to_str);
+    res
 }
