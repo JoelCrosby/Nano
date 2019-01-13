@@ -68,11 +68,16 @@ fn load_configuration() -> Result<Config, io::Error> {
 }
 
 fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
-    // Allocate 1kB buffer
-    let mut buffer = [0; 1024];
-
-    // Fill buffer from stream.
-    stream.read(&mut buffer).unwrap();
+    // Read tream to buffer.
+    let buffer = match read_stream_to_buffer(&mut stream) {
+        Ok(c) => c,
+        Err(err) => {
+            let msg = format!("An error occured while trying to read stream. \r\n{}", err);
+            res_internal_server_error(&mut stream, &msg)
+                .expect("unable to responde with 500");
+            return;
+        }
+    };
 
     // Read utf8 buffer to String.
     let strget = String::from_utf8_lossy(&buffer);
@@ -132,6 +137,14 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
     res_ok(&mut stream, &response).expect("res ok error.");
 }
 
+fn read_stream_to_buffer(stream: &mut TcpStream) -> Result<[u8; 1024], io::Error> {
+    // Create a new empty buffer.
+    let mut buffer = [0; 1024];
+    // Fill buffer from stream.
+    stream.read(&mut buffer)?;
+    Ok(buffer)
+}
+
 fn find_resource_path_in_stream(chunks: Vec<&str>) -> Option<&str> {
     let start = "/";
     for x in 0..chunks.len() {
@@ -151,6 +164,15 @@ fn res_ok(stream: &mut TcpStream, response: &str) -> Result<(), io::Error> {
 
 fn res_not_found(stream: &mut TcpStream) -> Result<(), io::Error> {
     let response = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
+    stream.write(response.as_bytes())?;
+    stream.flush()?;
+    Ok(())
+}
+
+fn res_internal_server_error(stream: &mut TcpStream, message: &str) -> Result<(), io::Error> {
+    println!("{}", &message);
+    let status_line = "HTTP/1.1 500 NOT FOUND\r\n\r\n";
+    let response = format!("{}Content-Type: text/plain\r\n\r\n{}", status_line, message);
     stream.write(response.as_bytes())?;
     stream.flush()?;
     Ok(())
