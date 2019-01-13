@@ -146,10 +146,9 @@ fn read_stream_to_buffer(stream: &mut TcpStream) -> Result<[u8; 1024], io::Error
 
 fn find_resource_path_in_stream(chunks: Vec<&str>) -> Option<&str> {
     let start = "/";
-    for x in 0..chunks.len() {
-        if chunks[x].starts_with(start) {
-            let path = chunks[x];
-            return Some(path);
+    for chunk in chunks.iter() {
+        if chunk.starts_with(start) {
+            return Some(chunk);
         }
     }
     None
