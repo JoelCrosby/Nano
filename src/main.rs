@@ -79,7 +79,7 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
     // Read utf8 buffer to String.
     let strget = String::from_utf8_lossy(&buffer);
 
-    let chunks: Vec<_> = strget.split_whitespace().collect();
+    let chunks: Vec<&str> = strget.split_whitespace().collect();
 
     let resource_path = match find_resource_path_in_stream(chunks) {
         Some(val) => val,
