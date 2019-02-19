@@ -175,18 +175,9 @@ fn res_internal_server_error(stream: &mut TcpStream, message: &str) -> Result<()
 }
 
 fn read_file(filename: &str) -> Result<String, io::Error> {
-    let f = File::open(filename);
-
-    let mut f = match f {
-        Ok(file) => file,
-        Err(error) => {
-            return Err(error);
-        }
-    };
-
     let mut contents = String::new();
+    let mut f = File::open(filename)?;
     f.read_to_string(&mut contents)?;
-
     Ok(contents)
 }
 
