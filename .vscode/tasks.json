@@ -15,6 +15,9 @@
                 "showReuseMessage": true,
                 "clear": true
             },
+            "problemMatcher": [
+                "$rustc"
+            ]
         },
         {
             "label": "release",
