@@ -3,14 +3,16 @@ use std::net::TcpStream;
 
 use crate::lib::stream;
 
-struct Request {
-    raw: String,
-    path: String,
+pub struct Request {
+    pub buffer: [u8; 1024],
+    pub raw: String,
+    pub path: String,
 }
 
-pub fn read_stream_to_request(stream: &mut TcpStream) -> Result<Request, io::Error> {
+pub fn read_stream_to_request(tcp_stream: &mut TcpStream) -> Result<Request, io::Error> {
 
-    let strget = stream::read_stream_to_string(&mut stream)?;
+    let buffer = stream::read_stream_to_buffer(tcp_stream)?;
+    let strget = String::from_utf8_lossy(&buffer).to_string();
 
     let chunks: Vec<&str> = strget.split_whitespace().collect();
 
@@ -20,6 +22,7 @@ pub fn read_stream_to_request(stream: &mut TcpStream) -> Result<Request, io::Err
     };
 
     let result = Request {
+        buffer: buffer,
         raw: strget,
         path: resource_path.to_string()
     };

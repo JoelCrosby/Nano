@@ -4,7 +4,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
-mod lib::res;
+mod lib;
 
 use std::io;
 use std::net::TcpListener;
@@ -70,23 +70,23 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
         Ok(c) => c,
         Err(err) => {
             let msg = format!("An error occured while trying to read stream. \r\n{}", err);
-            res::res_internal_server_error(&mut stream, &msg).expect("unable to responde with 500");
+            lib::res::res_internal_server_error(&mut stream, &msg).expect("unable to responde with 500");
             return;
         }
     };
 
     println!("req -> {}", request.path);
 
-    let mainpage = "index.html";
+    let mainpage = "index.html".to_string();
 
-    let ext = lib::file::get_extension_from_filename(&resource_path);
+    let ext = lib::file::get_extension_from_filename(&request.path);
     let ext = match ext {
         Some(val) => val,
         None => ".html",
     };
 
     let get = b"GET / HTTP/1.1\r\n";
-    let (status_line, filename, mime) = if buffer.starts_with(get) {
+    let (status_line, filename, mime) = if request.buffer.starts_with(get) {
         (
             "HTTP/1.1 200 OK\r\n",
             &mainpage,
@@ -95,7 +95,7 @@ fn handle_connection(mut stream: TcpStream, wwwroot: &str) {
     } else {
         (
             "HTTP/1.1 200 OK\r\n",
-            &resource_path,
+            &request.path,
             mime_guess::get_mime_type_str(ext),
         )
     };
